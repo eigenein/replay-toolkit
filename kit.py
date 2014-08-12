@@ -12,21 +12,6 @@ import click
 import blowfish
 
 
-class StructCache:
-    """Caches compiled Struct instances."""
-
-    CACHE = {}
-
-    @classmethod
-    def get(cls, fmt):
-        """Gets cached Struct instance."""
-        instance = cls.CACHE.get(fmt)
-        if not instance:
-            instance = struct.Struct(fmt)
-            cls.CACHE[fmt] = instance
-        return instance
-
-
 @click.command(short_help="Unpack replay.")
 @click.argument("replay", type=click.File("rb"))
 @click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
@@ -78,7 +63,7 @@ class ReplayHeader:
 class LengthMixin:
     """Length mixin."""
 
-    STRUCT = StructCache.get("<i")
+    STRUCT = struct.Struct("<i")
 
     @classmethod
     def read_length(cls, replay):
