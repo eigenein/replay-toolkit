@@ -1,0 +1,341 @@
+{
+  "clientVersionFromXml": "World\u00a0of\u00a0Tanks v.0.9.2 #745",
+  "serverName": "WOT RU6",
+  "regionCode": "RU",
+  "mapName": "28_desert",
+  "dateTime": "10.08.2014 18:53:59",
+  "gameplayID": "domination",
+  "playerName": "eigenein",
+  "roamingSettings": [
+    1,
+    1,
+    [
+      [
+        1,
+        1,
+        499999999,
+        "RU"
+      ],
+      [
+        2,
+        500000000,
+        999999999,
+        "EU"
+      ],
+      [
+        3,
+        1000000000,
+        1499999999,
+        "NA"
+      ]
+    ],
+    []
+  ],
+  "playerID": 5589968,
+  "vehicles": {
+    "12774697": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:KV-1s",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Schanin",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774705": {
+      "clanAbbrev": "",
+      "vehicleType": "uk:GB09_Churchill_VII",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "sokol4546",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774716": {
+      "clanAbbrev": "PY3K",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "eigenein",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774702": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:T-34-85",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "KOT1234RU",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774704": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Sergafon_nk",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774701": {
+      "clanAbbrev": "",
+      "vehicleType": "france:ELC_AMX",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "_Aurum_79_",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774695": {
+      "clanAbbrev": "S-FUG",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "_Dimentiy",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774709": {
+      "clanAbbrev": "KOD13",
+      "vehicleType": "ussr:SU-100",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Pr01OOpr0",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774721": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:KV-1s",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "37537500",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774706": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Toman27",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774694": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "_Andr2012_",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774707": {
+      "clanAbbrev": "",
+      "vehicleType": "uk:GB21_Cromwell",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Deniil_War",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774708": {
+      "clanAbbrev": "PWD_1",
+      "vehicleType": "ussr:T-34-85",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "16184Pavlik161",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774700": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:T-34-85",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Laila7",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774696": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:T-34-85",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Tiny_tolkai",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774722": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:KV-1s",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "illya_borisov",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774711": {
+      "clanAbbrev": "",
+      "vehicleType": "germany:VK3001P",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Alex_volk",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774703": {
+      "clanAbbrev": "",
+      "vehicleType": "germany:Nashorn",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Gilgamesh_125rus",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774718": {
+      "clanAbbrev": "",
+      "vehicleType": "germany:JagdPzIV",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "zaypoc",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774723": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "FaNaTik_N45",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774699": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Z_M_E_Y_80",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774713": {
+      "clanAbbrev": "",
+      "vehicleType": "france:ELC_AMX",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "GANSLVOV",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774720": {
+      "clanAbbrev": "",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Tschutang",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774717": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:KV-1s",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "tolyan_kleymenov",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774715": {
+      "clanAbbrev": "C9",
+      "vehicleType": "china:Ch20_Type58",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "kaptur",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774719": {
+      "clanAbbrev": "",
+      "vehicleType": "uk:GB28_Bishop",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "gytalaks",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774710": {
+      "clanAbbrev": "FRFK",
+      "vehicleType": "ussr:KV1",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "KZ_P0WER",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774698": {
+      "clanAbbrev": "",
+      "vehicleType": "ussr:KV2",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "antoha6446",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774712": {
+      "clanAbbrev": "",
+      "vehicleType": "france:AMX_105AM",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "sernur77",
+      "team": 1,
+      "igrType": 0,
+      "isAlive": true
+    },
+    "12774714": {
+      "clanAbbrev": "74RU2",
+      "vehicleType": "usa:M18_Hellcat",
+      "events": {},
+      "isTeamKiller": false,
+      "name": "Mopozz",
+      "team": 2,
+      "igrType": 0,
+      "isAlive": true
+    }
+  },
+  "mapDisplayName": "\u041f\u0435\u0441\u0447\u0430\u043d\u0430\u044f \u0440\u0435\u043a\u0430",
+  "playerVehicle": "usa-M18_Hellcat",
+  "clientVersionFromExe": "0, 9, 2, 0",
+  "battleType": 1
+}
