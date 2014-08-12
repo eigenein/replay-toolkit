@@ -35,7 +35,7 @@ def unpack(replay, first, second, packets):
     if json_block_count == 2:
         json.dump(ReplayJson.read(replay), second, indent=2)
     magic = replay.read(4)
-    logging.debug("Magic: %s.", binascii.hexlify(magic))
+    logging.debug("Magic: %s.", binascii.hexlify(magic))  # TODO: check magic
     data = ReplayEncryptedPart.read(replay)
     packets.write(data)
 
