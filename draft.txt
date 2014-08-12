@@ -1,0 +1,11 @@
+entity_enter
+    001122334455667788
+    player_id:0:i 12345678
+    health:4:H 350
+end
+
+entity_leave
+    00112233445566778899aabbccddeeff
+    player_id:0:i 87654321
+    position:12:fff 1.0 2.0 3.0
+end
