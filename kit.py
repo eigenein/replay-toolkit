@@ -1,4 +1,5 @@
 import binascii
+import enum
 import json
 import logging
 import operator
@@ -140,6 +141,48 @@ def dis():
         -o packets.txt
     """
     pass
+
+
+class PacketType(enum.Enum):
+    """Replay packet type."""
+    base_player_create = 0x00
+    cell_player_create = 0x01
+    entity_control = 0x02
+    entity_enter = 0x03
+    entity_leave = 0x04
+    entity_create = 0x05
+    entity_properties = 0x06
+    entity_property = 0x07
+    entity_method = 0x08
+    entity_move = 0x09
+    entity_move_with_error = 0x0A
+    space_data = 0x0B
+    space_gone = 0x0C
+    stream_complete = 0x0D
+    entities_reset = 0x0E
+    restore_client = 0x0F
+    enable_entities_rejected = 0x10
+    client_ready = 0x11
+    set_arena_period = 0x12
+    set_arena_length = 0x13
+    client_version = 0x14
+    update_camera = 0x15
+    update_gun_marker = 0x16
+    change_control_mode = 0x17
+    update_turret_yaw = 0x18
+    update_gun_pitch = 0x19
+    ammo_button_pressed = 0x1A
+    update_fps_ping_lag = 0x1B
+    set_gun_reload_time = 0x1C
+    set_active_consumable_slot = 0x1D
+    set_player_vehicle_id = 0x1E
+    battle_chat_message = 0x1F
+    nested_entity_property = 0x20
+    minimap_cell_clicked = 0x21
+    update_camera2 = 0x22
+    set_server_time = 0x23
+    lock_target = 0x24
+    set_cruise_mode = 0x25
 
 
 @click.command(short_help="Assemble packets.")
