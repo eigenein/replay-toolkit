@@ -1,3 +1,4 @@
+import binascii
 import json
 import logging
 import struct
@@ -5,6 +6,41 @@ import sys
 import zlib
 
 import click
+
+
+class ReplayHeader:
+    """Replay header tools."""
+
+    HEADER = b"\x12\x32\x34\x11\x02\x00\x00\x00"
+
+    @classmethod
+    def read(cls, replay):
+        """Reads replay header."""
+        logging.debug("Reading header...")
+        header = replay.read(len(cls.HEADER))
+        logging.debug("Header: %s.", binascii.hexlify(header))
+        if header != cls.HEADER:
+            logging.warning("Header mismatch.")
+        json_block_count = header[4]
+        logging.debug("JSON block count: %d.", json_block_count)
+        if json_block_count not in (1, 2):
+            logging.warning("Invalid JSON block count.")
+        return json_block_count
+
+
+class ReplayJson:
+    """Replay JSON tools."""
+
+    LENGTH_STRUCT = struct.Struct("<i")
+    ENCODING = "ascii"
+
+    @classmethod
+    def read(cls, replay):
+        """Reads JSON from replay."""
+        logging.debug("Reading JSON...")
+        length = cls.LENGTH_STRUCT.unpack(replay.read(cls.LENGTH_STRUCT.size))[0]
+        logging.debug("JSON length: %d.", length)
+        return json.loads(replay.read(length).decode(cls.ENCODING))
 
 
 @click.command(short_help="Unpack replay.")
@@ -25,7 +61,10 @@ def unpack(replay, first, second, packets):
         -2 second.json
         -p packets.bin
     """
-    pass
+    json_block_count = ReplayHeader.read(replay)
+    json.dump(ReplayJson.read(replay), first, indent=2)
+    if json_block_count == 2:
+        json.dump(ReplayJson.read(replay), second, indent=2)
 
 
 @click.command(short_help="Disassemble into packets.")
