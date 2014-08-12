@@ -11,6 +11,21 @@ import click
 import blowfish
 
 
+class StructCache:
+    """Caches compiled Struct instances."""
+
+    CACHE = {}
+
+    @classmethod
+    def get(cls, fmt):
+        """Gets cached Struct instance."""
+        instance = cls.CACHE.get(fmt)
+        if not instance:
+            instance = struct.Struct(fmt)
+            cls.CACHE[fmt] = instance
+        return instance
+
+
 class ReplayHeader:
     """Replay header tools."""
 
@@ -34,7 +49,7 @@ class ReplayHeader:
 class LengthMixin:
     """Length mixin."""
 
-    STRUCT = struct.Struct("<i")
+    STRUCT = StructCache.get("<i")
 
     @classmethod
     def read_length(cls, replay):
@@ -68,7 +83,7 @@ class ReplayEncryptedPart(LengthMixin):
         length = cls.read_length(replay)
         logging.debug("Decrypting...")
         blocks = []
-        previous_block = bytes(8)
+        previous_block = bytes(cls.BLOCK_LENGTH)
         while True:
             block = replay.read(cls.BLOCK_LENGTH)
             if not block:
