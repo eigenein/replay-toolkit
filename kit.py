@@ -143,7 +143,7 @@ def dis():
     pass
 
 
-class PacketType(enum.Enum):
+class ReplayPacketType(enum.Enum):
     """Replay packet type."""
     base_player_create = 0x00
     cell_player_create = 0x01
@@ -183,6 +183,19 @@ class PacketType(enum.Enum):
     set_server_time = 0x23
     lock_target = 0x24
     set_cruise_mode = 0x25
+
+
+class ReplayPropertyType(enum.Enum):
+    """Replay packet property type."""
+    player_id = 1
+    health = 2
+    source = 3
+    target = 4
+    position = 5
+    hull_orientation = 6
+    message = 7
+    destroyed_track_id = 8
+    alt_track_state = 9
 
 
 @click.command(short_help="Assemble packets.")
