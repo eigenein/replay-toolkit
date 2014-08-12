@@ -1,27 +1,77 @@
 import json
 import logging
+import struct
 import sys
+import zlib
 
 import click
 
 
-@click.command(short_help="unpack replay")
-def unpack():
+@click.command(short_help="Unpack replay.")
+@click.argument("replay", type=click.File("rb"))
+@click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
+@click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt"))
+@click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wt"))
+def unpack(replay, first, second, packets):
+    """
+    Unpacks replay file into JSON parts and raw packets part.
+
+    Example use:
+
+    \b
+    kit.py unpack
+        20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
+        -1 first.json
+        -2 second.json
+        -p packets.bin
+    """
     pass
 
 
-@click.command(short_help="disassemble into packets")
+@click.command(short_help="Disassemble into packets.")
 def dis():
+    """
+    Disassembles binary packets part into plain text packets description.
+
+    Example use:
+
+    \b
+    kit.py dis
+        packets.bin
+        -o packets.txt
+    """
     pass
 
 
-@click.command(short_help="assemble packets")
+@click.command(short_help="Assemble packets.")
 def asm():
+    """
+    Assembles plain text packets description back into binary.
+
+    Example use:
+
+    \b
+    kit.py asm
+        packets.txt
+        -o packets.bin
+    """
     pass
 
 
-@click.command(short_help="pack replay")
+@click.command(short_help="Pack replay.")
 def pack():
+    """
+    Packs all the parts back into consistent replay.
+
+    Example use:
+
+    \b
+    kit.py pack
+        -1 first.json
+        -2 second.json
+        -p packets.bin
+        -o 20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
+    """
     pass
 
 
