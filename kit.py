@@ -26,6 +26,34 @@ class StructCache:
         return instance
 
 
+@click.command(short_help="Unpack replay.")
+@click.argument("replay", type=click.File("rb"))
+@click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
+@click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt"))
+@click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wb"))
+def unpack(replay, first, second, packets):
+    """
+    Unpacks replay file into JSON parts and raw packets part.
+
+    Example use:
+
+    \b
+    kit.py unpack
+        20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
+        -1 first.json
+        -2 second.json
+        -p packets.bin
+    """
+    json_block_count = ReplayHeader.read(replay)
+    json.dump(ReplayJson.read(replay), first, indent=2)
+    if json_block_count == 2:
+        json.dump(ReplayJson.read(replay), second, indent=2)
+    magic = replay.read(4)
+    logging.debug("Magic: %s.", binascii.hexlify(magic))
+    data = ReplayEncryptedPart.read(replay)
+    packets.write(data)
+
+
 class ReplayHeader:
     """Replay header tools."""
 
@@ -97,34 +125,6 @@ class ReplayEncryptedPart(LengthMixin):
         uncompressed_data = zlib.decompress(compressed_data)
         logging.debug("Uncompressed data length: %d.", len(uncompressed_data))
         return uncompressed_data
-
-
-@click.command(short_help="Unpack replay.")
-@click.argument("replay", type=click.File("rb"))
-@click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
-@click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt"))
-@click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wb"))
-def unpack(replay, first, second, packets):
-    """
-    Unpacks replay file into JSON parts and raw packets part.
-
-    Example use:
-
-    \b
-    kit.py unpack
-        20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
-        -1 first.json
-        -2 second.json
-        -p packets.bin
-    """
-    json_block_count = ReplayHeader.read(replay)
-    json.dump(ReplayJson.read(replay), first, indent=2)
-    if json_block_count == 2:
-        json.dump(ReplayJson.read(replay), second, indent=2)
-    magic = replay.read(4)
-    logging.debug("Magic: %s.", binascii.hexlify(magic))
-    data = ReplayEncryptedPart.read(replay)
-    packets.write(data)
 
 
 @click.command(short_help="Disassemble into packets.")
