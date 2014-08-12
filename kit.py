@@ -88,7 +88,7 @@ class ReplayEncryptedPart(LengthMixin):
 @click.argument("replay", type=click.File("rb"))
 @click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
 @click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt"))
-@click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wt"))
+@click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wb"))
 def unpack(replay, first, second, packets):
     """
     Unpacks replay file into JSON parts and raw packets part.
@@ -108,7 +108,8 @@ def unpack(replay, first, second, packets):
         json.dump(ReplayJson.read(replay), second, indent=2)
     magic = replay.read(4)
     logging.debug("Magic: %s.", binascii.hexlify(magic))
-    ReplayEncryptedPart.read(replay)
+    data = ReplayEncryptedPart.read(replay)
+    packets.write(data)
 
 
 @click.command(short_help="Disassemble into packets.")
