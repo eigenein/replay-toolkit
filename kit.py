@@ -1,5 +1,6 @@
 import binascii
 import enum
+import itertools
 import json
 import logging
 import operator
@@ -31,13 +32,30 @@ def unpack(replay, first, second, packets):
         -p packets.bin
     """
     json_block_count = ReplayHeader.read(replay)
-    json.dump(ReplayJson.read(replay), first, indent=2)
+    json.dump(Json.read(replay), first, indent=2)
     if json_block_count == 2:
-        json.dump(ReplayJson.read(replay), second, indent=2)
+        json.dump(Json.read(replay), second, indent=2)
     magic = replay.read(4)
     logging.debug("Magic: %s.", binascii.hexlify(magic))  # TODO: check magic
-    data = ReplayEncryptedPart.read(replay)
+    data = Encryptor.read(replay)
     packets.write(data)
+
+
+@click.command(short_help="Pack replay.")
+def pack():
+    """
+    Packs all the parts back into consistent replay.
+
+    Example use:
+
+    \b
+    kit.py pack
+        -1 first.json
+        -2 second.json
+        -p packets.bin
+        -o 20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
+    """
+    pass
 
 
 class ReplayHeader:
@@ -63,16 +81,19 @@ class ReplayHeader:
 class LengthMixin:
     """Length mixin."""
 
-    STRUCT = struct.Struct("<i")
+    LENGTH_STRUCT = struct.Struct("<i")
 
     @classmethod
-    def read_length(cls, replay):
-        length = cls.STRUCT.unpack(replay.read(cls.STRUCT.size))[0]
+    def read_length(cls, fp):
+        buffer = fp.read(cls.LENGTH_STRUCT.size)
+        if not buffer:
+            raise StopIteration()
+        length = cls.LENGTH_STRUCT.unpack(buffer)[0]
         logging.debug("Length: %d.", length)
         return length
 
 
-class ReplayJson(LengthMixin):
+class Json(LengthMixin):
     """Replay JSON tools."""
 
     ENCODING = "ascii"
@@ -85,7 +106,7 @@ class ReplayJson(LengthMixin):
         return json.loads(replay.read(length).decode(cls.ENCODING))
 
 
-class ReplayEncryptedPart(LengthMixin):
+class Encryptor(LengthMixin):
     """Encrypted part tools."""
 
     BLOCK_LENGTH = 8
@@ -114,9 +135,22 @@ class ReplayEncryptedPart(LengthMixin):
 
 
 @click.command(short_help="Disassemble into packets.")
-def dis():
+@click.argument("packets", type=click.File("rb"))
+@click.option("-o", "--output", help="Disassembled output.", required=True, type=click.File("wt", encoding="utf-8"))
+def dis(packets, output):
     """
     Disassembles binary packets part into plain text packets description.
+
+    Output format is sequence of packet descriptions:
+
+    \b
+    clock packet_type
+    payload
+    \b
+        offset property_type value [value [value ...]]
+        offset property_type value [value [value ...]]
+        ...
+    end
 
     Example use:
 
@@ -125,11 +159,44 @@ def dis():
         packets.bin
         -o packets.txt
     """
+    for packet_count in itertools.count(0):
+        try:
+            packet_type, subtype, clock, payload = PacketAssembler.read_packet(packets)
+        except StopIteration:
+            break
+        # Begin packet.
+        print("begin {0:.3f} {1.name}".format(clock, packet_type), file=output)
+        print(binascii.hexlify(payload).decode("ascii"), file=output)
+        print(file=output)
+        # Print properties.
+        for property_type in PacketAssembler.get_properties(packet_type, subtype):
+            values = PacketAssembler.get_property_serializer(property_type).deserialize(
+                payload, PacketAssembler.get_property_offset(property_type, subtype))
+            print("{0:4d} {1.name} {2}".format(0, property_type, " ".join(map(str, values))), file=output)
+        # End packet.
+        print("end", file=output)
+        print(file=output)
+    logging.info("Done. %d packets.", packet_count)
+
+
+@click.command(short_help="Assemble packets.")
+def asm():
+    """
+    Assembles plain text packets description back into binary.
+
+    Example use:
+
+    \b
+    kit.py asm
+        packets.txt
+        -o packets.bin
+    """
     pass
 
 
-class ReplayPacketType(enum.Enum):
+class PacketType(enum.Enum):
     """Replay packet type."""
+    unknown_last = -1
     base_player_create = 0x00
     cell_player_create = 0x01
     entity_control = 0x02
@@ -170,7 +237,7 @@ class ReplayPacketType(enum.Enum):
     set_cruise_mode = 0x25
 
 
-class ReplayPropertyType(enum.Enum):
+class PropertyType(enum.Enum):
     """Replay packet property type."""
     player_id = 1
     health = 2
@@ -183,36 +250,125 @@ class ReplayPropertyType(enum.Enum):
     alt_track_state = 9
 
 
-@click.command(short_help="Assemble packets.")
-def asm():
-    """
-    Assembles plain text packets description back into binary.
+class PropertySerializer:
+    """Serializes and deserializes property value."""
 
-    Example use:
-
-    \b
-    kit.py asm
-        packets.txt
-        -o packets.bin
-    """
-    pass
+    def deserialize(self, payload, offset):
+        raise NotImplementedError()
 
 
-@click.command(short_help="Pack replay.")
-def pack():
-    """
-    Packs all the parts back into consistent replay.
+class StructPropertySerializer(PropertySerializer):
+    """Struct serializer."""
 
-    Example use:
+    def __init__(self, fmt):
+        self._struct = struct.Struct(fmt)
 
-    \b
-    kit.py pack
-        -1 first.json
-        -2 second.json
-        -p packets.bin
-        -o 20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
-    """
-    pass
+    def deserialize(self, payload, offset):
+        return self._struct.unpack(payload[offset:(offset + self._struct.size)])
+
+
+class MessageSerializer(PropertySerializer, LengthMixin):
+    """Battle chat message serializer."""
+
+    def deserialize(self, payload, offset):
+        length = self.LENGTH_STRUCT.unpack(payload[offset:(offset + 4)])[0]
+        return (payload[(offset + 4):][:length].decode("utf-8"), )
+
+
+class PacketAssembler(LengthMixin):
+    """Reads properties of packet."""
+
+    # Packet header structs.
+    PACKET_TYPE_STRUCT = struct.Struct("<i")
+    CLOCK_STRUCT = struct.Struct("<f")
+
+    # Property serializers.
+    PLAYER_SERIALIZER = StructPropertySerializer("<i")
+    POSITION_SERIALIZER = StructPropertySerializer("<fff")
+    HEALTH_SERIALIZER = StructPropertySerializer("<H")
+    MESSAGE_SERIALIZER = MessageSerializer()
+
+    @classmethod
+    def read_packet(cls, packets):
+        """Reads packet from input file."""
+        payload_length = cls.read_length(packets)
+        packet_type = cls.PACKET_TYPE_STRUCT.unpack(packets.read(cls.PACKET_TYPE_STRUCT.size))[0]
+        packet_type = PacketType(packet_type)
+        payload = packets.read(payload_length + 4)
+        clock = cls.CLOCK_STRUCT.unpack(payload[0:4])[0]
+        subtype = None
+        if packet_type in (PacketType.entity_property, PacketType.entity_method):
+            subtype = cls.PACKET_TYPE_STRUCT.unpack(payload[8:12])[0]
+        return packet_type, subtype, clock, payload
+
+    @classmethod
+    def get_properties(cls, packet_type, subtype):
+        """Gets property types for packet type and subtype."""
+        if packet_type in (PacketType.entity_enter, PacketType.entity_create):
+            yield PropertyType.player_id
+        elif packet_type == PacketType.entity_move_with_error:
+            yield PropertyType.player_id
+            yield PropertyType.position
+            yield PropertyType.hull_orientation
+        elif packet_type == PacketType.entity_property:
+            yield PropertyType.player_id
+            if subtype == 0x03:
+                yield PropertyType.health
+            # TODO: elif subtype == 0x07:
+            # TODO:    yield PropertyType.destroyed_track_id
+        elif packet_type == PacketType.entity_method:
+            yield PropertyType.player_id
+            # TODO: property_t::tank_destroyed
+            if subtype == 0x01:
+                yield PropertyType.source
+                yield PropertyType.health
+            elif subtype == 0x05:
+                yield PropertyType.source
+            elif subtype == 0x0B:
+                yield PropertyType.source
+                yield PropertyType.target
+            elif subtype == 0x17:
+                yield PropertyType.target
+        elif packet_type == PacketType.battle_chat_message:
+            yield PropertyType.message
+        elif packet_type == PacketType.nested_entity_property:
+            yield PropertyType.player_id
+            # TODO: property_t::destroyed_track_id
+            # TODO: property_t::alt_track_state
+
+    @classmethod
+    def get_property_offset(cls, property_type, packet_subtype):
+        """Gets property offset for specified property type and packet subtype."""
+        if property_type == PropertyType.health:
+            return 16
+        if property_type == PropertyType.hull_orientation:
+            return 40
+        if property_type == PropertyType.message:
+            return 4
+        if property_type == PropertyType.player_id:
+            return 4
+        if property_type == PropertyType.position:
+            return 16
+        if property_type == PropertyType.source:
+            return 18 if packet_subtype == 0x01 else (22 if packet_subtype == 0x0B else 16)
+        if property_type == PropertyType.target:
+            return 20 if packet_subtype == 0x17 else 16
+        raise ValueError((property_type, packet_subtype))
+        # TODO: PropertyType.AltTrackState
+        # TODO: PropertyType.DestroyedTrackId
+
+    @classmethod
+    def get_property_serializer(cls, property_type):
+        """Gets serializer for specified property type."""
+        if property_type in (PropertyType.player_id, PropertyType.source, PropertyType.target):
+            return cls.PLAYER_SERIALIZER
+        if property_type in (PropertyType.hull_orientation, PropertyType.position):
+            return cls.POSITION_SERIALIZER
+        if property_type == PropertyType.health:
+            return cls.HEALTH_SERIALIZER
+        if property_type == PropertyType.message:
+            return cls.MESSAGE_SERIALIZER
+        raise ValueError(property_type)
 
 
 @click.group()
@@ -226,7 +382,7 @@ def main(verbose):
     Use `asm` command followed by `pack` command to pack sequence of packets back into replay.
     """
     logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(message)s",
+        format="%(message)s",
         level=(logging.INFO if not verbose else logging.DEBUG),
         stream=sys.stderr,
     )
