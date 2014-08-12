@@ -1,11 +1,14 @@
 import binascii
 import json
 import logging
+import operator
 import struct
 import sys
 import zlib
 
 import click
+
+import blowfish
 
 
 class ReplayHeader:
@@ -28,19 +31,57 @@ class ReplayHeader:
         return json_block_count
 
 
-class ReplayJson:
+class LengthMixin:
+    """Length mixin."""
+
+    STRUCT = struct.Struct("<i")
+
+    @classmethod
+    def read_length(cls, replay):
+        length = cls.STRUCT.unpack(replay.read(cls.STRUCT.size))[0]
+        logging.debug("Length: %d.", length)
+        return length
+
+
+class ReplayJson(LengthMixin):
     """Replay JSON tools."""
 
-    LENGTH_STRUCT = struct.Struct("<i")
     ENCODING = "ascii"
 
     @classmethod
     def read(cls, replay):
         """Reads JSON from replay."""
         logging.debug("Reading JSON...")
-        length = cls.LENGTH_STRUCT.unpack(replay.read(cls.LENGTH_STRUCT.size))[0]
-        logging.debug("JSON length: %d.", length)
+        length = cls.read_length(replay)
         return json.loads(replay.read(length).decode(cls.ENCODING))
+
+
+class ReplayEncryptedPart(LengthMixin):
+    """Encrypted part tools."""
+
+    BLOCK_LENGTH = 8
+    CIPHER = blowfish.Blowfish(b"\xDE\x72\xBE\xA0\xDE\x04\xBE\xB1\xDE\xFE\xBE\xEF\xDE\xAD\xBE\xEF")
+
+    @classmethod
+    def read(cls, replay):
+        logging.debug("Reading encrypted part...")
+        length = cls.read_length(replay)
+        logging.debug("Decrypting...")
+        blocks = []
+        previous_block = bytes(8)
+        while True:
+            block = replay.read(cls.BLOCK_LENGTH)
+            if not block:
+                break
+            block = cls.CIPHER.decrypt(block)
+            block = bytes(map(operator.xor, block, previous_block))
+            previous_block = block
+            blocks.append(block)
+        compressed_data = b"".join(blocks)[:length]
+        logging.debug("Decompressing...")
+        uncompressed_data = zlib.decompress(compressed_data)
+        logging.debug("Uncompressed data length: %d.", len(uncompressed_data))
+        return uncompressed_data
 
 
 @click.command(short_help="Unpack replay.")
@@ -65,6 +106,9 @@ def unpack(replay, first, second, packets):
     json.dump(ReplayJson.read(replay), first, indent=2)
     if json_block_count == 2:
         json.dump(ReplayJson.read(replay), second, indent=2)
+    magic = replay.read(4)
+    logging.debug("Magic: %s.", binascii.hexlify(magic))
+    ReplayEncryptedPart.read(replay)
 
 
 @click.command(short_help="Disassemble into packets.")
