@@ -1,11 +1,11 @@
-entity_enter
+entity_enter: 876.5
     001122334455667788
-    player_id:0:i 12345678
-    health:4:H 350
+       0 player_id 12345678
+       4 health 350
 end
 
-entity_leave
+entity_leave: 765.4
     00112233445566778899aabbccddeeff
-    player_id:0:i 87654321
-    position:12:fff 1.0 2.0 3.0
+       4 player_id 87654321
+      12 position 1.0 2.0 3.0
 end
