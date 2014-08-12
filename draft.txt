@@ -1,3 +1,10 @@
+clock packet_type
+payload
+
+    offset property_type value [value [value ...]]
+    offset property_type value [value [value ...]]
+end
+
 876.5 entity_enter
 001122334455667788
 
