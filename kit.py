@@ -16,7 +16,7 @@ import blowfish
 @click.command(short_help="Unpack replay.")
 @click.argument("replay", type=click.File("rb"))
 @click.option("-1", "--first", help="First JSON part output.", required=True, type=click.File("wt"))
-@click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt"))
+@click.option("-2", "--second", help="Second JSON part output.", required=True, type=click.File("wt", lazy=True))
 @click.option("-p", "--packets", help="Packets output.", required=True, type=click.File("wb"))
 def unpack(replay, first, second, packets):
     """
@@ -91,6 +91,10 @@ class LengthMixin:
         length = cls.LENGTH_STRUCT.unpack(buffer)[0]
         logging.debug("Length: %d.", length)
         return length
+
+    @classmethod
+    def write_length(cls, fp, length):
+        fp.write(cls.LENGTH_STRUCT.pack(length))
 
 
 class Json(LengthMixin):
@@ -170,9 +174,9 @@ def dis(packets, output):
         print(file=output)
         # Print properties.
         for property_type in PacketAssembler.get_properties(packet_type, subtype):
-            values = PacketAssembler.get_property_serializer(property_type).deserialize(
-                payload, PacketAssembler.get_property_offset(property_type, subtype))
-            print("{0:4d} {1.name} {2}".format(0, property_type, " ".join(map(str, values))), file=output)
+            offset = PacketAssembler.get_property_offset(property_type, subtype)
+            values = PacketAssembler.get_property_serializer(property_type).deserialize(payload, offset)
+            print("{0:4d} {1.name} {2}".format(offset, property_type, " ".join(map(str, values))), file=output)
         # End packet.
         print("end", file=output)
         print(file=output)
@@ -180,7 +184,9 @@ def dis(packets, output):
 
 
 @click.command(short_help="Assemble packets.")
-def asm():
+@click.argument("source", type=click.File("rt", encoding="utf-8"))
+@click.option("-o", "--output", help="Assembled output.", required=True, type=click.File("wb"))
+def asm(source, output):
     """
     Assembles plain text packets description back into binary.
 
@@ -191,7 +197,48 @@ def asm():
         packets.txt
         -o packets.bin
     """
-    pass
+
+    state = AssemblerState.initial
+    packet_count = 0
+
+    for i, line in enumerate(source, start=1):
+        line = line.strip()
+        if not line:
+            continue
+
+        if state == AssemblerState.initial:
+            begin, _, packet_type = line.split()
+            if begin != "begin":
+                raise ValueError(begin)
+            packet_type = PacketType[packet_type]
+            state = AssemblerState.begin
+
+        elif state == AssemblerState.begin:
+            payload = bytearray(binascii.unhexlify(line.encode("ascii")))
+            state = AssemblerState.properties
+
+        elif line != "end":
+            offset, property_type, values = line.split(maxsplit=2)
+            offset = int(offset)
+            property_type = PropertyType[property_type]
+            values = values.split() if property_type != PropertyType.message else [values]
+            PacketAssembler.set_property(payload, property_type, offset, values)
+
+        else:
+            PacketAssembler.write_packet(output, packet_type, bytes(payload))
+            packet_count += 1
+            state = AssemblerState.initial
+
+    if state != AssemblerState.initial:
+        raise ValueError(state)
+
+    logging.info("Done. %d packets.", packet_count)
+
+
+class AssemblerState:
+    initial = 0
+    begin = 1
+    properties = 2
 
 
 class PacketType(enum.Enum):
@@ -256,23 +303,47 @@ class PropertySerializer:
     def deserialize(self, payload, offset):
         raise NotImplementedError()
 
+    def serialize(self, values):
+        raise NotImplementedError()
+
+    def cast(self, value):
+        return value
+
 
 class StructPropertySerializer(PropertySerializer):
     """Struct serializer."""
 
-    def __init__(self, fmt):
-        self._struct = struct.Struct(fmt)
+    def __init__(self, fmt, type):
+        self.struct = struct.Struct(fmt)
+        self.type = type
 
     def deserialize(self, payload, offset):
-        return self._struct.unpack(payload[offset:(offset + self._struct.size)])
+        return self.struct.unpack(payload[offset:(offset + self.struct.size)])
+
+    def serialize(self, values):
+        return self.struct.pack(*values)
+
+    def cast(self, value):
+        """Casts value to serializer specific type."""
+        return self.type(value)
+
+    def __repr__(self):
+        return "{0.__class__.__name__}(type={0.type})".format(self)
 
 
 class MessageSerializer(PropertySerializer, LengthMixin):
     """Battle chat message serializer."""
 
+    ENCODING = "utf-8"
+
     def deserialize(self, payload, offset):
         length = self.LENGTH_STRUCT.unpack(payload[offset:(offset + 4)])[0]
-        return (payload[(offset + 4):][:length].decode("utf-8"), )
+        return (payload[(offset + 4):][:length].decode(self.ENCODING), )
+
+    def serialize(self, values):
+        (value, ) = values
+        value = value.encode(self.ENCODING)
+        return self.LENGTH_STRUCT.pack(len(value)) + value
 
 
 class PacketAssembler(LengthMixin):
@@ -283,9 +354,9 @@ class PacketAssembler(LengthMixin):
     CLOCK_STRUCT = struct.Struct("<f")
 
     # Property serializers.
-    PLAYER_SERIALIZER = StructPropertySerializer("<i")
-    POSITION_SERIALIZER = StructPropertySerializer("<fff")
-    HEALTH_SERIALIZER = StructPropertySerializer("<H")
+    PLAYER_SERIALIZER = StructPropertySerializer("<i", int)
+    POSITION_SERIALIZER = StructPropertySerializer("<fff", float)
+    HEALTH_SERIALIZER = StructPropertySerializer("<H", int)
     MESSAGE_SERIALIZER = MessageSerializer()
 
     @classmethod
@@ -369,6 +440,20 @@ class PacketAssembler(LengthMixin):
         if property_type == PropertyType.message:
             return cls.MESSAGE_SERIALIZER
         raise ValueError(property_type)
+
+    @classmethod
+    def set_property(cls, payload, property_type, offset, values):
+        """Sets property value on payload."""
+        serializer = cls.get_property_serializer(property_type)
+        replacement = serializer.serialize(tuple(map(serializer.cast, values)))
+        payload[offset:(offset + len(replacement))] = replacement
+
+    @classmethod
+    def write_packet(cls, output, packet_type, payload):
+        """Writes packet to output file."""
+        cls.write_length(output, len(payload) - 4)
+        output.write(cls.PACKET_TYPE_STRUCT.pack(packet_type.value))
+        output.write(payload)
 
 
 @click.group()
