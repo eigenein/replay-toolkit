@@ -349,6 +349,7 @@ class PropertyType(enum.Enum):
     destroyed_track_id = 8
     alt_track_state = 9
     clock = 10
+    subtype = 11
 
 
 class PropertySerializer:
@@ -409,7 +410,7 @@ class PacketAssembler(LengthMixin):
 
     # Property serializers.
     CLOCK_SERIALIZER = StructPropertySerializer("<f", float)
-    PLAYER_SERIALIZER = StructPropertySerializer("<i", int)
+    INT_SERIALIZER = StructPropertySerializer("<i", int)
     POSITION_SERIALIZER = StructPropertySerializer("<fff", float)
     HEALTH_SERIALIZER = StructPropertySerializer("<H", int)
     MESSAGE_SERIALIZER = MessageSerializer()
@@ -439,12 +440,14 @@ class PacketAssembler(LengthMixin):
             yield PropertyType.hull_orientation
         elif packet_type == PacketType.entity_property:
             yield PropertyType.player_id
+            yield PropertyType.subtype
             if subtype == 0x03:
                 yield PropertyType.health
             # TODO: elif subtype == 0x07:
             # TODO:    yield PropertyType.destroyed_track_id
         elif packet_type == PacketType.entity_method:
             yield PropertyType.player_id
+            yield PropertyType.subtype
             # TODO: property_t::tank_destroyed
             if subtype == 0x01:
                 yield PropertyType.source
@@ -468,6 +471,8 @@ class PacketAssembler(LengthMixin):
         """Gets property offset for specified property type and packet subtype."""
         if property_type == PropertyType.clock:
             return 0
+        if property_type == PropertyType.subtype:
+            return 8
         if property_type == PropertyType.health:
             return 16
         if property_type == PropertyType.hull_orientation:
@@ -491,8 +496,8 @@ class PacketAssembler(LengthMixin):
         """Gets serializer for specified property type."""
         if property_type == PropertyType.clock:
             return cls.CLOCK_SERIALIZER
-        if property_type in (PropertyType.player_id, PropertyType.source, PropertyType.target):
-            return cls.PLAYER_SERIALIZER
+        if property_type in (PropertyType.player_id, PropertyType.source, PropertyType.target, PropertyType.subtype):
+            return cls.INT_SERIALIZER
         if property_type in (PropertyType.hull_orientation, PropertyType.position):
             return cls.POSITION_SERIALIZER
         if property_type == PropertyType.health:
