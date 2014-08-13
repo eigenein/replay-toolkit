@@ -434,13 +434,13 @@ class Blowfish:
             raise RuntimeError("Attempted to encrypt data of invalid block length: %s" % len(data))
 
         # Use big endianess since that's what everyone else uses
-        xl = ord(data[3]) | (ord(data[2]) << 8) | (ord(data[1]) << 16) | (ord(data[0]) << 24)
-        xr = ord(data[7]) | (ord(data[6]) << 8) | (ord(data[5]) << 16) | (ord(data[4]) << 24)
+        xl = (data[3]) | ((data[2]) << 8) | ((data[1]) << 16) | ((data[0]) << 24)
+        xr = (data[7]) | ((data[6]) << 8) | ((data[5]) << 16) | ((data[4]) << 24)
 
         cl, cr = self.cipher(xl, xr, self.ENCRYPT)
-        chars = ''.join([
-            chr((cl >> 24) & 0xFF), chr((cl >> 16) & 0xFF), chr((cl >> 8) & 0xFF), chr(cl & 0xFF),
-            chr((cr >> 24) & 0xFF), chr((cr >> 16) & 0xFF), chr((cr >> 8) & 0xFF), chr(cr & 0xFF)
+        chars = bytes([
+            ((cl >> 24) & 0xFF), ((cl >> 16) & 0xFF), ((cl >> 8) & 0xFF), (cl & 0xFF),
+            ((cr >> 24) & 0xFF), ((cr >> 16) & 0xFF), ((cr >> 8) & 0xFF), (cr & 0xFF)
         ])
         return chars
 

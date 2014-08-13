@@ -31,18 +31,23 @@ def unpack(replay, first, second, packets):
         -2 second.json
         -p packets.bin
     """
+
     json_block_count = ReplayHeader.read(replay)
     json.dump(Json.read(replay), first, indent=2)
     if json_block_count == 2:
         json.dump(Json.read(replay), second, indent=2)
     magic = replay.read(4)
-    logging.debug("Magic: %s.", binascii.hexlify(magic))  # TODO: check magic
+    logging.info("Magic: %s.", binascii.hexlify(magic))
     data = Encryptor.read(replay)
     packets.write(data)
 
 
 @click.command(short_help="Pack replay.")
-def pack():
+@click.option("-1", "--first", help="First JSON part.", required=True, type=click.File("rt"))
+@click.option("-2", "--second", help="Second JSON part.", required=False, type=click.File("rt"))
+@click.option("-p", "--packets", help="Packets binary input..", required=True, type=click.File("rb"))
+@click.option("-o", "--output", help="Output replay file.", required=True, type=click.File("wb"))
+def pack(first, second, packets, output):
     """
     Packs all the parts back into consistent replay.
 
@@ -55,7 +60,14 @@ def pack():
         -p packets.bin
         -o 20140810_1853_usa-M18_Hellcat_28_desert.wotreplay
     """
-    pass
+
+    ReplayHeader.write(output, 2 if second else 1)
+    Json.write(output, json.load(first))
+    if second:
+        Json.write(output, json.load(second))
+    output.write(b"\xaa\xc6\x31\x00")  # magic
+    data = packets.read()
+    Encryptor.write(output, data)
 
 
 class ReplayHeader:
@@ -66,16 +78,24 @@ class ReplayHeader:
     @classmethod
     def read(cls, replay):
         """Reads replay header."""
-        logging.debug("Reading header...")
+        logging.info("Reading header...")
         header = replay.read(len(cls.HEADER))
-        logging.debug("Header: %s.", binascii.hexlify(header))
-        if header != cls.HEADER:
+        logging.info("Header: %s.", binascii.hexlify(header))
+        if (header[:4] != cls.HEADER[:4]) or (header[5:] != cls.HEADER[5:]):
             logging.warning("Header mismatch.")
         json_block_count = header[4]
-        logging.debug("JSON block count: %d.", json_block_count)
+        logging.info("JSON block count: %d.", json_block_count)
         if json_block_count not in (1, 2):
             logging.warning("Invalid JSON block count.")
         return json_block_count
+
+    @classmethod
+    def write(cls, output, json_block_count):
+        """Writes replay header."""
+        logging.info("Writing header...")
+        header = bytearray(cls.HEADER)
+        header[4] = json_block_count
+        output.write(bytes(header))
 
 
 class LengthMixin:
@@ -89,7 +109,7 @@ class LengthMixin:
         if not buffer:
             raise StopIteration()
         length = cls.LENGTH_STRUCT.unpack(buffer)[0]
-        logging.debug("Length: %d.", length)
+        logging.info("Length: %d.", length)
         return length
 
     @classmethod
@@ -105,9 +125,17 @@ class Json(LengthMixin):
     @classmethod
     def read(cls, replay):
         """Reads JSON from replay."""
-        logging.debug("Reading JSON...")
+        logging.info("Reading JSON...")
         length = cls.read_length(replay)
         return json.loads(replay.read(length).decode(cls.ENCODING))
+
+    @classmethod
+    def write(cls, output, obj):
+        """Writes JSON to replay."""
+        logging.info("Writing JSON...")
+        value = json.dumps(obj).encode(cls.ENCODING)
+        cls.write_length(output, len(value))
+        output.write(value)
 
 
 class Encryptor(LengthMixin):
@@ -118,9 +146,9 @@ class Encryptor(LengthMixin):
 
     @classmethod
     def read(cls, replay):
-        logging.debug("Reading encrypted part...")
+        logging.info("Reading encrypted part...")
         length = cls.read_length(replay)
-        logging.debug("Decrypting...")
+        logging.info("Decrypting...")
         blocks = []
         previous_block = bytes(cls.BLOCK_LENGTH)
         while True:
@@ -128,14 +156,40 @@ class Encryptor(LengthMixin):
             if not block:
                 break
             block = cls.CIPHER.decrypt(block)
-            block = bytes(map(operator.xor, block, previous_block))
+            block = cls.xor_blocks(block, previous_block)
             previous_block = block
             blocks.append(block)
         compressed_data = b"".join(blocks)[:length]
-        logging.debug("Decompressing...")
+        logging.info("Decompressing...")
         uncompressed_data = zlib.decompress(compressed_data)
-        logging.debug("Uncompressed data length: %d.", len(uncompressed_data))
+        logging.info("Uncompressed data length: %d.", len(uncompressed_data))
         return uncompressed_data
+
+    @classmethod
+    def write(cls, output, data):
+        # Compress.
+        logging.info("Compressing...")
+        compressed_data = zlib.compress(data)
+        # Write length.
+        compressed_length = len(compressed_data)
+        cls.write_length(output, compressed_length)
+        # Align.
+        tail_length = compressed_length % 8
+        if tail_length:
+            compressed_data += bytes(8 - tail_length)
+        # Encrypt and write.
+        logging.info("Encrypting...")
+        previous_block = bytes(cls.BLOCK_LENGTH)
+        for offset in range(0, len(compressed_data), cls.BLOCK_LENGTH):
+            unencrypted_block = compressed_data[offset:(offset + cls.BLOCK_LENGTH)]
+            block = cls.xor_blocks(unencrypted_block, previous_block)
+            previous_block = unencrypted_block
+            block = cls.CIPHER.encrypt(block)
+            output.write(block)
+
+    @classmethod
+    def xor_blocks(cls, block1, block2):
+        return bytes(map(operator.xor, block1, block2))
 
 
 @click.command(short_help="Disassemble into packets.")
@@ -457,8 +511,7 @@ class PacketAssembler(LengthMixin):
 
 
 @click.group()
-@click.option("-v", "--verbose", is_flag=True)
-def main(verbose):
+def main():
     """
     World of Tanks Replay Toolkit.
 
@@ -468,7 +521,7 @@ def main(verbose):
     """
     logging.basicConfig(
         format="%(message)s",
-        level=(logging.INFO if not verbose else logging.DEBUG),
+        level=logging.INFO,
         stream=sys.stderr,
     )
 
