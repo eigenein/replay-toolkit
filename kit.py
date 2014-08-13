@@ -109,7 +109,6 @@ class LengthMixin:
         if not buffer:
             raise StopIteration()
         length = cls.LENGTH_STRUCT.unpack(buffer)[0]
-        logging.info("Length: %d.", length)
         return length
 
     @classmethod
@@ -223,7 +222,7 @@ def dis(packets, output):
         except StopIteration:
             break
         # Begin packet.
-        print("begin {0:.3f} {1.name}".format(clock, packet_type), file=output)
+        print("begin {0.name}".format(packet_type), file=output)
         print(binascii.hexlify(payload).decode("ascii"), file=output)
         print(file=output)
         # Print properties.
@@ -261,7 +260,7 @@ def asm(source, output):
             continue
 
         if state == AssemblerState.initial:
-            begin, _, packet_type = line.split()
+            begin, packet_type = line.split()
             if begin != "begin":
                 raise ValueError(begin)
             packet_type = PacketType[packet_type]
@@ -349,6 +348,7 @@ class PropertyType(enum.Enum):
     message = 7
     destroyed_track_id = 8
     alt_track_state = 9
+    clock = 10
 
 
 class PropertySerializer:
@@ -408,6 +408,7 @@ class PacketAssembler(LengthMixin):
     CLOCK_STRUCT = struct.Struct("<f")
 
     # Property serializers.
+    CLOCK_SERIALIZER = StructPropertySerializer("<f", float)
     PLAYER_SERIALIZER = StructPropertySerializer("<i", int)
     POSITION_SERIALIZER = StructPropertySerializer("<fff", float)
     HEALTH_SERIALIZER = StructPropertySerializer("<H", int)
@@ -429,6 +430,7 @@ class PacketAssembler(LengthMixin):
     @classmethod
     def get_properties(cls, packet_type, subtype):
         """Gets property types for packet type and subtype."""
+        yield PropertyType.clock
         if packet_type in (PacketType.entity_enter, PacketType.entity_create):
             yield PropertyType.player_id
         elif packet_type == PacketType.entity_move_with_error:
@@ -464,6 +466,8 @@ class PacketAssembler(LengthMixin):
     @classmethod
     def get_property_offset(cls, property_type, packet_subtype):
         """Gets property offset for specified property type and packet subtype."""
+        if property_type == PropertyType.clock:
+            return 0
         if property_type == PropertyType.health:
             return 16
         if property_type == PropertyType.hull_orientation:
@@ -485,6 +489,8 @@ class PacketAssembler(LengthMixin):
     @classmethod
     def get_property_serializer(cls, property_type):
         """Gets serializer for specified property type."""
+        if property_type == PropertyType.clock:
+            return cls.CLOCK_SERIALIZER
         if property_type in (PropertyType.player_id, PropertyType.source, PropertyType.target):
             return cls.PLAYER_SERIALIZER
         if property_type in (PropertyType.hull_orientation, PropertyType.position):
