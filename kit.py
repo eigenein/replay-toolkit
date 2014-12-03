@@ -335,6 +335,8 @@ class PacketType(enum.Enum):
     set_server_time = 0x23
     lock_target = 0x24
     set_cruise_mode = 0x25
+    unknown_39 = 39
+    unknown_40 = 40
 
 
 class PropertyType(enum.Enum):
