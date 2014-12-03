@@ -355,6 +355,9 @@ class PropertyType(enum.Enum):
     alt_track_state = 9
     clock = 10
     subtype = 11
+    fps = 12
+    ping = 13
+    lag = 14
 
 
 class PropertySerializer:
@@ -417,8 +420,9 @@ class PacketAssembler(LengthMixin):
     CLOCK_SERIALIZER = StructPropertySerializer("<f", float)
     INT_SERIALIZER = StructPropertySerializer("<i", int)
     POSITION_SERIALIZER = StructPropertySerializer("<fff", float)
-    HEALTH_SERIALIZER = StructPropertySerializer("<H", int)
+    SHORT_SERIALIZER = StructPropertySerializer("<H", int)
     MESSAGE_SERIALIZER = MessageSerializer()
+    BYTE_SERIALIZER = StructPropertySerializer("<B", int)
 
     @classmethod
     def read_packet(cls, packets):
@@ -468,6 +472,10 @@ class PacketAssembler(LengthMixin):
             yield PropertyType.message
         elif packet_type == PacketType.nested_entity_property:
             yield PropertyType.player_id
+        elif packet_type == PacketType.update_fps_ping_lag:
+            yield PropertyType.fps
+            yield PropertyType.ping
+            yield PropertyType.lag
             # TODO: property_t::destroyed_track_id
             # TODO: property_t::alt_track_state
 
@@ -492,6 +500,12 @@ class PacketAssembler(LengthMixin):
             return 18 if packet_subtype == 0x01 else (22 if packet_subtype == 0x0B else 16)
         if property_type == PropertyType.target:
             return 20 if packet_subtype == 0x17 else 16
+        if property_type == PropertyType.fps:
+            return 4
+        if property_type == PropertyType.ping:
+            return 5
+        if property_type == PropertyType.lag:
+            return 7
         raise ValueError((property_type, packet_subtype))
         # TODO: PropertyType.AltTrackState
         # TODO: PropertyType.DestroyedTrackId
@@ -505,10 +519,12 @@ class PacketAssembler(LengthMixin):
             return cls.INT_SERIALIZER
         if property_type in (PropertyType.hull_orientation, PropertyType.position):
             return cls.POSITION_SERIALIZER
-        if property_type == PropertyType.health:
-            return cls.HEALTH_SERIALIZER
+        if property_type in (PropertyType.health, PropertyType.ping):
+            return cls.SHORT_SERIALIZER
         if property_type == PropertyType.message:
             return cls.MESSAGE_SERIALIZER
+        if property_type in (PropertyType.fps, PropertyType.lag):
+            return cls.BYTE_SERIALIZER
         raise ValueError(property_type)
 
     @classmethod
