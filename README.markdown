@@ -10,6 +10,12 @@
 python kit.py unpack -1 first.json -2 second.json -p packets.bin Replay-exploit.wotreplay
 ```
 
+Если не нужен, например, JSON, то в Windows можно вместо файла передать NUL:
+
+```
+python kit.py unpack b.wotreplay -1 NUL -2 NUL -p b.bin
+```
+
 Затем, дамп с пакетами можно перевести в листинг с текстовым описанием типов и некоторых полей пакетов:
 
 ```
