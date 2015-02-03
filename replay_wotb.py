@@ -4,7 +4,7 @@
 import struct
 import pickle
 
-replay = open("20141222_0017_GB13_FV215b_karelia.wotreplay", 'rb')
+replay = open("20141221_2203_T-54_fort.wotreplay", 'rb')
 replay.read(4)
 header1 = replay.read(4)
 header1 = struct.unpack('i', header1)
@@ -33,3 +33,13 @@ print(pick_list_nick[-1])
 list_nick = pickle.loads(pick_list_nick, encoding="cp866")
 for tup in list_nick:
 	print(tup[2])
+
+print(list_nick)  # вывод ушей
+
+replay.read(25) # не знаю зачем именно 25
+
+len_pick = replay.read(1)  # длина второго запикленного пакета
+len_pick = struct.unpack('b', len_pick)
+pickle_data = replay.read(len_pick[0])
+pickle_data = pickle.loads(pickle_data, encoding="cp866")
+print(pickle_data)  # вывод второго запикленного пакета
